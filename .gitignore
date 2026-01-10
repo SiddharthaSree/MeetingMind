@@ -28,7 +28,8 @@ MANIFEST
 
 # PyInstaller
 *.manifest
-*.spec
+# Keep our spec file for building
+!meetingmind.spec
 
 # Installer logs
 pip-log.txt
