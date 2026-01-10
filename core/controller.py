@@ -20,6 +20,7 @@ class AppState(Enum):
     PROCESSING = "processing"
     QA_SESSION = "qa_session"
     GENERATING = "generating"
+    MONITORING = "monitoring"  # Monitoring for meetings
     ERROR = "error"
 
 
@@ -32,6 +33,7 @@ class MeetingMindController:
     - Coordinate between services (audio, transcription, diarization, Q&A, summary)
     - Handle the Q&A-driven workflow
     - Manage meeting data
+    - Auto-detect and process meetings
     """
     
     def __init__(self, config: Config = None):
@@ -45,6 +47,10 @@ class MeetingMindController:
         self._diarizer = None
         self._summarizer = None
         self._qa_engine = None
+        self._meeting_detector = None
+        self._template_manager = None
+        self._export_service = None
+        self._history_service = None
         
         # Current session data
         self.current_recording_path: Optional[str] = None
@@ -53,6 +59,12 @@ class MeetingMindController:
         self.current_summary = None
         self.current_qa_responses: Dict[str, Any] = {}
         self.speaker_names: Dict[str, str] = {}  # SPEAKER_00 -> "John"
+        self.current_template: str = "general"  # Current meeting template
+        self.current_meeting_app: Optional[str] = None  # Detected meeting app
+        
+        # Auto-recording state
+        self._auto_record_enabled = False
+        self._was_in_meeting = False
         
         # Processing thread
         self._processing_thread: Optional[threading.Thread] = None
@@ -112,6 +124,38 @@ class MeetingMindController:
                 llm_model=self.config.ollama.model
             )
         return self._qa_engine
+    
+    @property
+    def meeting_detector(self):
+        """Lazy load meeting detector service"""
+        if self._meeting_detector is None:
+            from services.meeting_detector import MeetingDetector
+            self._meeting_detector = MeetingDetector()
+        return self._meeting_detector
+    
+    @property
+    def template_manager(self):
+        """Lazy load template manager"""
+        if self._template_manager is None:
+            from services.templates import TemplateManager
+            self._template_manager = TemplateManager()
+        return self._template_manager
+    
+    @property
+    def export_service(self):
+        """Lazy load export service"""
+        if self._export_service is None:
+            from services.exporter import ExportService
+            self._export_service = ExportService()
+        return self._export_service
+    
+    @property
+    def history_service(self):
+        """Lazy load history service"""
+        if self._history_service is None:
+            from services.history import MeetingHistoryService
+            self._history_service = MeetingHistoryService()
+        return self._history_service
     
     # ==================== Recording Methods ====================
     
@@ -538,3 +582,186 @@ class MeetingMindController:
     def get_available_audio_devices(self) -> List[Dict]:
         """Get list of available audio devices"""
         return self.audio_service.list_devices()
+    
+    # ==================== Meeting Detection & Auto-Record ====================
+    
+    def enable_auto_record(self):
+        """Enable automatic recording when meetings are detected"""
+        self._auto_record_enabled = True
+        
+        def on_meeting_status(is_active: bool, app_name: str):
+            """Callback when meeting status changes"""
+            if is_active and not self._was_in_meeting:
+                # Meeting started
+                self._was_in_meeting = True
+                self.current_meeting_app = app_name
+                self.emitter.emit(EventType.RECORDING_STARTED, {
+                    "auto_detected": True,
+                    "app": app_name,
+                    "timestamp": datetime.now().isoformat()
+                })
+                print(f"Meeting detected in {app_name}, starting recording...")
+                self.start_recording()
+                
+            elif not is_active and self._was_in_meeting:
+                # Meeting ended
+                self._was_in_meeting = False
+                self.emitter.emit(EventType.RECORDING_STOPPED, {
+                    "auto_detected": True,
+                    "app": self.current_meeting_app
+                })
+                print(f"Meeting ended, stopping recording...")
+                audio_path = self.stop_recording()
+                if audio_path:
+                    # Auto-process the recording
+                    self.process_audio(audio_path)
+        
+        self.meeting_detector.start_monitoring(callback=on_meeting_status)
+        self.state = AppState.MONITORING
+        print("Auto-record enabled, monitoring for meetings...")
+    
+    def disable_auto_record(self):
+        """Disable automatic recording"""
+        self._auto_record_enabled = False
+        self.meeting_detector.stop_monitoring()
+        if self.state == AppState.MONITORING:
+            self.state = AppState.IDLE
+        print("Auto-record disabled")
+    
+    def is_auto_record_enabled(self) -> bool:
+        """Check if auto-record is enabled"""
+        return self._auto_record_enabled
+    
+    def check_running_meetings(self) -> List[Dict]:
+        """Check which meeting apps are currently running"""
+        return self.meeting_detector.check_running_meetings()
+    
+    # ==================== Template Methods ====================
+    
+    def set_template(self, template_name: str):
+        """Set the current meeting template"""
+        if self.template_manager.get_template(template_name):
+            self.current_template = template_name
+            print(f"Template set to: {template_name}")
+        else:
+            print(f"Unknown template: {template_name}")
+    
+    def get_template(self, name: str = None):
+        """Get a meeting template"""
+        return self.template_manager.get_template(name or self.current_template)
+    
+    def list_templates(self) -> List[str]:
+        """List available templates"""
+        return self.template_manager.list_templates()
+    
+    def get_template_qa_prompts(self, template_name: str = None) -> List[str]:
+        """Get Q&A prompts for current/specified template"""
+        return self.template_manager.get_qa_prompts(template_name or self.current_template)
+    
+    # ==================== Export Methods ====================
+    
+    def export_meeting(
+        self,
+        meeting_data: Dict[str, Any],
+        output_path: str,
+        format: str = "markdown"
+    ) -> str:
+        """
+        Export a meeting to various formats
+        
+        Args:
+            meeting_data: Meeting data dictionary
+            output_path: Output file path (without extension)
+            format: Export format (markdown, html, json, docx, pdf)
+        
+        Returns:
+            Path to exported file
+        """
+        return self.export_service.export(meeting_data, output_path, format)
+    
+    def export_current_meeting(self, output_path: str, format: str = "markdown") -> str:
+        """Export the current meeting session"""
+        if not self.current_summary:
+            print("No current meeting to export")
+            return ""
+        
+        meeting_data = {
+            "id": datetime.now().strftime("%Y%m%d_%H%M%S"),
+            "created_at": datetime.now().isoformat(),
+            "audio_path": self.current_recording_path,
+            "transcript": self.current_transcript,
+            "summary": self.current_summary.get("summary", ""),
+            "key_points": self.current_summary.get("key_points", ""),
+            "action_items": self.current_summary.get("action_items", []),
+            "speaker_names": self.speaker_names,
+            "qa_responses": self.current_qa_responses
+        }
+        
+        return self.export_meeting(meeting_data, output_path, format)
+    
+    # ==================== History Methods ====================
+    
+    def save_to_history(self, meeting_data: Dict[str, Any], title: str = None) -> str:
+        """Save a meeting to history"""
+        return self.history_service.save_meeting(
+            meeting_data,
+            audio_path=meeting_data.get('audio_path'),
+            title=title
+        )
+    
+    def get_meeting_history(
+        self,
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[Dict]:
+        """Get meeting history list"""
+        records = self.history_service.list_meetings(limit, offset)
+        return [
+            {
+                "id": r.id,
+                "title": r.title,
+                "date": r.date,
+                "duration_seconds": r.duration_seconds,
+                "participants": r.participants,
+                "summary_preview": r.summary_preview,
+                "meeting_type": r.meeting_type
+            }
+            for r in records
+        ]
+    
+    def search_history(
+        self,
+        query: str = None,
+        participant: str = None,
+        date_from: str = None,
+        date_to: str = None
+    ) -> List[Dict]:
+        """Search meeting history"""
+        records = self.history_service.search_meetings(
+            query=query,
+            participant=participant,
+            date_from=date_from,
+            date_to=date_to
+        )
+        return [
+            {
+                "id": r.id,
+                "title": r.title,
+                "date": r.date,
+                "summary_preview": r.summary_preview,
+                "participants": r.participants
+            }
+            for r in records
+        ]
+    
+    def get_history_meeting(self, meeting_id: str) -> Optional[Dict]:
+        """Get full meeting data from history"""
+        return self.history_service.get_meeting(meeting_id)
+    
+    def delete_from_history(self, meeting_id: str) -> bool:
+        """Delete a meeting from history"""
+        return self.history_service.delete_meeting(meeting_id)
+    
+    def get_history_statistics(self) -> Dict[str, Any]:
+        """Get meeting history statistics"""
+        return self.history_service.get_statistics()

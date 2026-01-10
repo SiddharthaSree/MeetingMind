@@ -92,6 +92,24 @@ class MeetingMindUI:
             with gr.Column(scale=2):
                 gr.Markdown("### 🎤 Record Meeting Audio")
                 
+                # Auto-record toggle
+                with gr.Row():
+                    self.auto_record_toggle = gr.Checkbox(
+                        label="🤖 Auto-detect meetings (Teams/Zoom/Meet)",
+                        value=False,
+                        info="Automatically start recording when meetings are detected"
+                    )
+                    self.meeting_status = gr.Markdown("", visible=False)
+                
+                # Meeting template selection
+                with gr.Row():
+                    self.template_dropdown = gr.Dropdown(
+                        label="Meeting Template",
+                        choices=self._get_templates(),
+                        value="general",
+                        info="Choose a template for better summaries"
+                    )
+                
                 with gr.Row():
                     self.record_btn = gr.Button(
                         "🔴 Start Recording",
@@ -136,6 +154,18 @@ class MeetingMindUI:
         )
         
         # Event handlers
+        self.auto_record_toggle.change(
+            fn=self._toggle_auto_record,
+            inputs=[self.auto_record_toggle],
+            outputs=[self.meeting_status, self.recording_status]
+        )
+        
+        self.template_dropdown.change(
+            fn=self._set_template,
+            inputs=[self.template_dropdown],
+            outputs=[self.recording_status]
+        )
+        
         self.record_btn.click(
             fn=self._start_recording,
             outputs=[self.record_btn, self.stop_btn, self.recording_status, self.processing_log]
@@ -256,23 +286,38 @@ class MeetingMindUI:
                     interactive=False
                 )
         
-        # Export buttons
+        # Export section with multiple formats
+        gr.Markdown("### 📥 Export Options")
         with gr.Row():
-            self.export_md_btn = gr.Button("📥 Export Markdown")
-            self.export_json_btn = gr.Button("📥 Export JSON")
+            self.export_format = gr.Dropdown(
+                label="Export Format",
+                choices=["markdown", "html", "json", "docx", "pdf"],
+                value="markdown"
+            )
+            self.meeting_title_input = gr.Textbox(
+                label="Meeting Title (for export)",
+                placeholder="Optional: Enter a title for this meeting"
+            )
+        
+        with gr.Row():
+            self.export_btn = gr.Button("📥 Export Meeting", variant="primary")
+            self.save_history_btn = gr.Button("💾 Save to History")
             self.copy_btn = gr.Button("📋 Copy to Clipboard")
         
         self.export_file = gr.File(label="Download", visible=False)
+        self.export_status = gr.Markdown("")
         
         # Event handlers
-        self.export_md_btn.click(
-            fn=self._export_markdown,
-            outputs=[self.export_file]
+        self.export_btn.click(
+            fn=self._export_meeting,
+            inputs=[self.export_format, self.meeting_title_input],
+            outputs=[self.export_file, self.export_status]
         )
         
-        self.export_json_btn.click(
-            fn=self._export_json,
-            outputs=[self.export_file]
+        self.save_history_btn.click(
+            fn=self._save_to_history,
+            inputs=[self.meeting_title_input],
+            outputs=[self.export_status]
         )
     
     def _build_history_tab(self):
@@ -280,22 +325,69 @@ class MeetingMindUI:
         
         gr.Markdown("### 📚 Past Meetings")
         
+        # Search section
+        with gr.Row():
+            self.history_search = gr.Textbox(
+                label="Search",
+                placeholder="Search by title, participant, or keyword...",
+                scale=2
+            )
+            self.history_date_from = gr.Textbox(
+                label="From Date",
+                placeholder="YYYY-MM-DD",
+                scale=1
+            )
+            self.history_date_to = gr.Textbox(
+                label="To Date",
+                placeholder="YYYY-MM-DD",
+                scale=1
+            )
+            self.search_history_btn = gr.Button("🔍 Search", scale=1)
+        
+        # Statistics
+        with gr.Accordion("📊 Statistics", open=False):
+            self.history_stats = gr.Markdown("_Loading statistics..._")
+        
         self.history_list = gr.Dataframe(
-            headers=["Date", "Title", "Duration", "Participants"],
-            datatype=["str", "str", "str", "str"],
-            row_count=(5, "dynamic"),
-            col_count=(4, "fixed"),
+            headers=["ID", "Date", "Title", "Duration", "Participants", "Type"],
+            datatype=["str", "str", "str", "str", "str", "str"],
+            row_count=(10, "dynamic"),
+            col_count=(6, "fixed"),
             interactive=False
         )
         
         with gr.Row():
             self.refresh_history_btn = gr.Button("🔄 Refresh")
-            self.load_meeting_btn = gr.Button("📂 Load Selected")
+            self.load_meeting_btn = gr.Button("📂 Load Selected", variant="primary")
             self.delete_meeting_btn = gr.Button("🗑️ Delete Selected", variant="stop")
         
+        # Meeting details section
+        with gr.Accordion("📄 Meeting Details", open=False):
+            self.history_meeting_details = gr.Markdown("_Select a meeting to view details_")
+            self.history_export_btn = gr.Button("📥 Export Selected Meeting")
+        
+        # Event handlers
         self.refresh_history_btn.click(
             fn=self._load_history,
+            outputs=[self.history_list, self.history_stats]
+        )
+        
+        self.search_history_btn.click(
+            fn=self._search_history,
+            inputs=[self.history_search, self.history_date_from, self.history_date_to],
             outputs=[self.history_list]
+        )
+        
+        self.load_meeting_btn.click(
+            fn=self._load_selected_meeting,
+            inputs=[self.history_list],
+            outputs=[self.history_meeting_details]
+        )
+        
+        self.delete_meeting_btn.click(
+            fn=self._delete_selected_meeting,
+            inputs=[self.history_list],
+            outputs=[self.history_list, self.history_stats]
         )
     
     def _build_settings_tab(self):
@@ -350,6 +442,52 @@ class MeetingMindUI:
         )
     
     # ==================== Event Handlers ====================
+    
+    def _get_templates(self) -> List[str]:
+        """Get available meeting templates"""
+        try:
+            return self.controller.list_templates()
+        except:
+            return ["general", "standup", "planning", "retrospective", "one_on_one"]
+    
+    def _toggle_auto_record(self, enabled: bool):
+        """Toggle auto-record mode"""
+        try:
+            if enabled:
+                self.controller.enable_auto_record()
+                running = self.controller.check_running_meetings()
+                if running:
+                    apps = ", ".join([m['app'] for m in running])
+                    return (
+                        gr.update(visible=True, value=f"🟢 Monitoring... Detected: {apps}"),
+                        "Auto-record enabled. Will start when meetings begin."
+                    )
+                return (
+                    gr.update(visible=True, value="🟢 Monitoring for meetings..."),
+                    "Auto-record enabled. Waiting for meeting app..."
+                )
+            else:
+                self.controller.disable_auto_record()
+                return (
+                    gr.update(visible=False),
+                    "Auto-record disabled."
+                )
+        except Exception as e:
+            return (
+                gr.update(visible=True, value=f"❌ Error: {str(e)}"),
+                f"Error: {str(e)}"
+            )
+    
+    def _set_template(self, template_name: str):
+        """Set meeting template"""
+        try:
+            self.controller.set_template(template_name)
+            template = self.controller.get_template(template_name)
+            if template:
+                return f"Template: **{template.name}** - {template.description}"
+            return f"Template set to: {template_name}"
+        except Exception as e:
+            return f"Error setting template: {str(e)}"
     
     def _start_recording(self):
         """Start recording system audio"""
@@ -517,6 +655,60 @@ class MeetingMindUI:
         except Exception as e:
             print(f"Error finalizing: {e}")
     
+    def _export_meeting(self, format: str, title: str):
+        """Export meeting notes in specified format"""
+        if not hasattr(self.controller, 'current_summary') or not self.controller.current_summary:
+            return None, "❌ No meeting to export. Process a meeting first."
+        
+        try:
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = title.replace(" ", "_") if title else f"meeting_{timestamp}"
+            output_path = str(Path(MEETINGS_DIR) / filename)
+            
+            meeting_data = {
+                "id": timestamp,
+                "title": title or f"Meeting {timestamp}",
+                "created_at": datetime.now().isoformat(),
+                "audio_path": self.controller.current_recording_path,
+                "transcript": self.controller.current_transcript,
+                "summary": self.controller.current_summary,
+                "speaker_names": self.controller.speaker_names,
+                "qa_responses": self.controller.current_qa_responses
+            }
+            
+            exported_path = self.controller.export_meeting(meeting_data, output_path, format)
+            return exported_path, f"✅ Exported to: {exported_path}"
+        except Exception as e:
+            return None, f"❌ Export error: {str(e)}"
+    
+    def _save_to_history(self, title: str):
+        """Save current meeting to history"""
+        if not hasattr(self.controller, 'current_summary') or not self.controller.current_summary:
+            return "❌ No meeting to save. Process a meeting first."
+        
+        try:
+            from datetime import datetime
+            meeting_data = {
+                "id": datetime.now().strftime("%Y%m%d_%H%M%S"),
+                "title": title or f"Meeting {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                "created_at": datetime.now().isoformat(),
+                "audio_path": self.controller.current_recording_path,
+                "transcript": self.controller.current_transcript,
+                "summary": self.controller.current_summary,
+                "speaker_names": self.controller.speaker_names,
+                "qa_responses": self.controller.current_qa_responses,
+                "metadata": {
+                    "date": datetime.now().strftime("%Y-%m-%d"),
+                    "meeting_type": self.controller.current_template
+                }
+            }
+            
+            meeting_id = self.controller.save_to_history(meeting_data, title)
+            return f"✅ Saved to history with ID: {meeting_id}"
+        except Exception as e:
+            return f"❌ Error saving: {str(e)}"
+    
     def _export_markdown(self):
         """Export meeting notes as Markdown"""
         if not hasattr(self.controller, 'current_meeting_result'):
@@ -560,29 +752,130 @@ class MeetingMindUI:
         return str(output_path)
     
     def _load_history(self):
-        """Load meeting history"""
-        meetings_path = Path(MEETINGS_DIR)
-        if not meetings_path.exists():
+        """Load meeting history with statistics"""
+        try:
+            history = self.controller.get_meeting_history(limit=50)
+            stats = self.controller.get_history_statistics()
+            
+            # Format for dataframe
+            rows = []
+            for m in history:
+                duration = m.get('duration_seconds', 0)
+                duration_str = f"{int(duration // 60)}:{int(duration % 60):02d}" if duration else "-"
+                participants = ", ".join(m.get('participants', [])[:3])
+                if len(m.get('participants', [])) > 3:
+                    participants += "..."
+                
+                rows.append([
+                    m.get('id', ''),
+                    m.get('date', ''),
+                    m.get('title', 'Untitled')[:40],
+                    duration_str,
+                    participants or "-",
+                    m.get('meeting_type', 'general')
+                ])
+            
+            # Format statistics
+            stats_md = f"""
+**Total Meetings:** {stats.get('total_meetings', 0)}
+**Total Duration:** {stats.get('total_duration_hours', 0)} hours
+**Unique Participants:** {stats.get('unique_participants', 0)}
+
+**By Type:**
+"""
+            for mtype, count in stats.get('meetings_by_type', {}).items():
+                stats_md += f"- {mtype}: {count}\n"
+            
+            return rows, stats_md
+        except Exception as e:
+            print(f"Error loading history: {e}")
+            return [], f"Error: {str(e)}"
+    
+    def _search_history(self, query: str, date_from: str, date_to: str):
+        """Search meeting history"""
+        try:
+            results = self.controller.search_history(
+                query=query if query else None,
+                date_from=date_from if date_from else None,
+                date_to=date_to if date_to else None
+            )
+            
+            rows = []
+            for m in results:
+                rows.append([
+                    m.get('id', ''),
+                    m.get('date', ''),
+                    m.get('title', 'Untitled')[:40],
+                    "-",  # Duration not in search results
+                    ", ".join(m.get('participants', [])[:3]) or "-",
+                    "-"
+                ])
+            
+            return rows
+        except Exception as e:
+            print(f"Error searching history: {e}")
             return []
+    
+    def _load_selected_meeting(self, history_df):
+        """Load selected meeting details"""
+        if history_df is None or len(history_df) == 0:
+            return "_No meeting selected_"
         
-        meetings = []
-        for meeting_dir in meetings_path.iterdir():
-            if meeting_dir.is_dir():
-                meta_file = meeting_dir / "metadata.json"
-                if meta_file.exists():
-                    try:
-                        with open(meta_file) as f:
-                            meta = json.load(f)
-                        meetings.append([
-                            meta.get('date', 'Unknown'),
-                            meta.get('title', meeting_dir.name),
-                            meta.get('duration', 'Unknown'),
-                            ', '.join(meta.get('participants', []))
-                        ])
-                    except:
-                        continue
+        try:
+            # Get first selected row's ID
+            selected = history_df
+            if hasattr(selected, 'iloc'):
+                meeting_id = selected.iloc[0, 0]  # First column is ID
+            else:
+                meeting_id = selected[0][0]
+            
+            meeting_data = self.controller.get_history_meeting(meeting_id)
+            if not meeting_data:
+                return f"_Meeting {meeting_id} not found_"
+            
+            # Format meeting details
+            summary = meeting_data.get('summary', {})
+            transcript = meeting_data.get('transcript', {})
+            
+            md = f"""
+## {meeting_data.get('title', 'Meeting')}
+
+**Date:** {meeting_data.get('created_at', 'Unknown')}
+
+### Summary
+{summary.get('summary', 'No summary available') if isinstance(summary, dict) else summary}
+
+### Key Points
+{summary.get('key_points', 'No key points') if isinstance(summary, dict) else ''}
+
+### Action Items
+"""
+            action_items = summary.get('action_items', []) if isinstance(summary, dict) else []
+            for item in action_items:
+                if isinstance(item, dict):
+                    md += f"- {item.get('description', item)}\n"
+                else:
+                    md += f"- {item}\n"
+            
+            return md
+        except Exception as e:
+            return f"_Error loading meeting: {str(e)}_"
+    
+    def _delete_selected_meeting(self, history_df):
+        """Delete selected meeting from history"""
+        if history_df is None or len(history_df) == 0:
+            return history_df, "_No meeting selected_"
         
-        return meetings
+        try:
+            if hasattr(history_df, 'iloc'):
+                meeting_id = history_df.iloc[0, 0]
+            else:
+                meeting_id = history_df[0][0]
+            
+            self.controller.delete_from_history(meeting_id)
+            return self._load_history()
+        except Exception as e:
+            return history_df, f"Error: {str(e)}"
     
     def _save_settings(self, whisper_model, ollama_model, ollama_host, qa_mode, sample_rate):
         """Save configuration settings"""

@@ -6,6 +6,7 @@ A **100% free, offline meeting notes assistant** that captures system audio from
 
 ### 🎤 Audio Capture
 - **System Audio Recording** - Capture audio from Teams, Zoom, or any application (Windows WASAPI loopback)
+- **Auto-Detect Meetings** - Automatically start recording when Teams/Zoom/Meet opens
 - **Upload Support** - Drag & drop existing audio/video files
 - **System Tray** - Quick recording controls from your taskbar
 
@@ -21,9 +22,21 @@ A **100% free, offline meeting notes assistant** that captures system audio from
 
 ### 📋 Intelligent Summaries
 - **Smart Summaries** - Powered by Ollama LLMs (llama3.2, mistral, etc.)
+- **Meeting Templates** - Standup, planning, retrospective, 1:1 templates
 - **Action Items** - Automatically extracts tasks with assignees
 - **Key Decisions** - Highlights important decisions made
-- **Export Options** - Markdown, JSON, or copy to clipboard
+
+### 📥 Export Options
+- **Markdown** - Clean, portable format
+- **HTML** - Styled web pages
+- **JSON** - For integrations
+- **DOCX** - Word documents
+- **PDF** - Professional reports
+
+### 📚 Meeting History
+- **Search & Browse** - Find past meetings by date, participant, or keyword
+- **Statistics** - Track meeting duration and frequency
+- **Quick Reload** - Re-open and export any saved meeting
 
 ### 🔒 Privacy First
 - **100% Offline** - Everything runs locally, no API calls
@@ -39,6 +52,12 @@ A **100% free, offline meeting notes assistant** that captures system audio from
 - **8GB+ RAM** recommended (16GB for larger models)
 
 ## 🚀 Quick Start
+
+### Option A: Download Standalone EXE (Recommended)
+
+Download the latest release from [Releases](https://github.com/SiddharthaSree/MeetingMind/releases) - no Python installation required!
+
+### Option B: Run from Source
 
 ### 1. Install FFmpeg
 
@@ -160,22 +179,31 @@ After processing, you'll be guided through a Q&A session:
 ```
 MeetingMind/
 ├── main.py                 # Main entry point
+├── app.py                  # Alternative entry (runs Gradio only)
+├── build.bat               # Windows EXE build script
+├── build.py                # Python build script
+├── meetingmind.spec        # PyInstaller configuration
 ├── core/
 │   ├── config.py          # Configuration management
-│   ├── controller.py      # Main app controller
-│   └── events.py          # Event system
+│   ├── controller.py      # Main app controller (orchestrates all services)
+│   └── events.py          # Event system for async communication
 ├── services/
 │   ├── audio_capture.py   # WASAPI system audio recording
 │   ├── transcriber.py     # Whisper transcription
 │   ├── diarizer.py        # Speaker diarization
 │   ├── summarizer.py      # Ollama summarization
-│   └── qa_engine.py       # Q&A generation & management
+│   ├── qa_engine.py       # Q&A generation & management
+│   ├── meeting_detector.py # Auto-detect Teams/Zoom/Meet
+│   ├── templates.py       # Meeting templates (standup, planning, etc.)
+│   ├── exporter.py        # Export to MD/HTML/JSON/DOCX/PDF
+│   └── history.py         # Meeting history storage & search
 ├── ui/
 │   ├── gradio_app.py      # Web interface
 │   └── system_tray.py     # System tray application
 ├── data/
 │   ├── meetings/          # Saved meeting notes
 │   └── profiles/          # Speaker profiles
+├── assets/                 # Icons and images
 ├── docs/                   # Documentation
 ├── requirements.txt
 └── README.md

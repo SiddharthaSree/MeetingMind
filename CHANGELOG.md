@@ -9,10 +9,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned
 - Real-time transcription during recording
-- Export to PDF/DOCX formats
-- Custom summarization templates
 - Speaker profile learning (remember voices)
 - Batch processing for multiple files
+- Cross-platform support (macOS, Linux)
+
+---
+
+## [2.1.0] - 2025-01-11
+
+### 🚀 Phase 2 Features + Standalone EXE
+
+### Added
+
+#### 🤖 Auto-Detect Meetings (F8)
+- **Meeting App Detection** - Automatically detects Teams, Zoom, Meet, Webex, Slack
+- **Auto-Record Mode** - Optional auto-start recording when meetings begin
+- **Auto-Process** - Automatically process recording when meeting ends
+- **Process Monitoring** - Background monitoring for meeting applications
+
+#### 📑 Meeting Templates (F11)
+- **Template System** - Pre-configured templates for different meeting types
+- **Standup Template** - Daily standup format (blockers, progress, plans)
+- **Planning Template** - Sprint/project planning structure
+- **Retrospective Template** - What went well, improvements, actions
+- **One-on-One Template** - Manager/report meeting format
+- **General Template** - Default all-purpose format
+- **Custom Q&A Prompts** - Each template has specialized questions
+
+#### 📥 Export Formats (F12)
+- **Markdown Export** - Clean, portable format
+- **HTML Export** - Styled web pages with embedded CSS
+- **JSON Export** - Machine-readable format for integrations
+- **DOCX Export** - Microsoft Word documents
+- **PDF Export** - Professional reports (requires WeasyPrint)
+
+#### 📚 Meeting History (F13)
+- **History Storage** - Save and organize past meetings
+- **Search** - Find meetings by title, participant, keyword
+- **Date Filtering** - Filter by date range
+- **Statistics** - Track total meetings, duration, participants
+- **Quick Load** - Re-open and export any saved meeting
+- **Delete Management** - Clean up old meetings
+
+#### 🏗️ Standalone EXE Build
+- **PyInstaller Support** - Build standalone Windows executable
+- **build.bat** - One-click Windows build script
+- **build.py** - Python build script for more control
+- **meetingmind.spec** - PyInstaller configuration
+- **Version Info** - Embedded version metadata in EXE
+
+### Changed
+- **Enhanced Controller** - Integrated all new services
+- **Updated UI** - New tabs and features for history, templates, export
+- **Improved History Tab** - Search, statistics, and meeting details
+
+### New Files
+- `services/meeting_detector.py` - Meeting app detection service
+- `services/templates.py` - Meeting templates manager
+- `services/exporter.py` - Multi-format export service
+- `services/history.py` - Meeting history storage
+- `build.bat` - Windows EXE build script
+- `build.py` - Python build script
+- `meetingmind.spec` - PyInstaller spec file
+- `version_info.txt` - EXE version metadata
+
+### Dependencies Added
+- `psutil` - Process detection
+- `python-docx` - DOCX export
+- `weasyprint` - PDF export
+- `pyinstaller` - EXE building
 
 ---
 
@@ -96,7 +161,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 1.0.0 | 2026-01-10 | Initial release with transcription, summarization, and recording |
+| 2.1.0 | 2025-01-11 | Auto-detect meetings, templates, multi-format export, history, EXE build |
+| 2.0.0 | 2025-01-11 | System audio capture, speaker diarization, Q&A workflow |
+| 1.0.0 | 2025-01-10 | Initial release with transcription, summarization, and recording |
 
 ---
 
