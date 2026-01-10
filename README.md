@@ -33,6 +33,7 @@ A **100% free, offline meeting notes assistant** that captures system audio from
 ### 🎤 Audio Capture
 - **System Audio Recording** - Capture audio from Teams, Zoom, or any application (Windows WASAPI loopback)
 - **Auto-Detect Meetings** - Automatically start recording when Teams/Zoom/Meet opens
+- **Real-Time Transcription** - See text as you speak during meetings ⚡ NEW
 - **Upload Support** - Drag & drop existing audio/video files
 - **System Tray** - Quick recording controls from your taskbar
 
@@ -40,6 +41,13 @@ A **100% free, offline meeting notes assistant** that captures system audio from
 - **Accurate Transcription** - Uses OpenAI Whisper (runs 100% offline)
 - **Speaker Diarization** - Identifies who's speaking using pyannote-audio
 - **Audio Snippets** - Listen to clips to identify unknown speakers
+- **Word-Level Timestamps** - Precise timing for each word ⚡ NEW
+
+### 🌟 Highlights & Bookmarks ⚡ NEW
+- **Manual Bookmarks** - Mark important moments with Ctrl+Shift+B
+- **Auto-Detection** - AI identifies action items, decisions, questions
+- **Clip Extraction** - Export audio clips for specific highlights
+- **Quick Navigation** - Jump to highlighted moments
 
 ### 🤖 Smart Q&A Workflow
 - **Speaker Identification** - Audio clips help you name each speaker
@@ -51,6 +59,31 @@ A **100% free, offline meeting notes assistant** that captures system audio from
 - **Meeting Templates** - Standup, planning, retrospective, 1:1 templates
 - **Action Items** - Automatically extracts tasks with assignees
 - **Key Decisions** - Highlights important decisions made
+
+### 💬 Meeting Chat ⚡ NEW
+- **Ask Questions** - Query your past meetings with AI
+- **Semantic Search** - Find meetings by meaning, not just keywords
+- **Context-Aware** - Understands follow-up questions
+- **Cross-Meeting Insights** - Find patterns across meetings
+
+### 📊 Analytics Dashboard ⚡ NEW
+- **Meeting Statistics** - Duration, participants, word count
+- **Speaker Analytics** - Talk time per person
+- **Meeting Trends** - Patterns by day, week, month
+- **Productivity Score** - Based on action items and decisions
+
+### 🔗 Integrations ⚡ NEW
+- **Slack** - Send notes via webhook
+- **Microsoft Teams** - Share to Teams channels
+- **Notion** - Export to Notion databases
+- **Email** - Send via SMTP
+- **Calendar Sync** - Google Calendar & Outlook
+
+### ⌨️ Keyboard Shortcuts ⚡ NEW
+- **Ctrl+Shift+R** - Toggle recording
+- **Ctrl+Shift+B** - Add bookmark
+- **Ctrl+Shift+A** - Mark action item
+- **Ctrl+Shift+D** - Mark decision
 
 ### 📥 Export Options
 - **Markdown** - Clean, portable format

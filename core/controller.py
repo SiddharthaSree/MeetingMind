@@ -21,6 +21,7 @@ class AppState(Enum):
     QA_SESSION = "qa_session"
     GENERATING = "generating"
     MONITORING = "monitoring"  # Monitoring for meetings
+    LIVE_TRANSCRIBING = "live_transcribing"  # Real-time transcription mode
     ERROR = "error"
 
 
@@ -34,6 +35,8 @@ class MeetingMindController:
     - Handle the Q&A-driven workflow
     - Manage meeting data
     - Auto-detect and process meetings
+    - Real-time transcription and highlights
+    - Calendar integration and keyboard shortcuts
     """
     
     def __init__(self, config: Config = None):
@@ -41,7 +44,7 @@ class MeetingMindController:
         self.emitter = get_emitter()
         self.state = AppState.IDLE
         
-        # Services (lazy loaded)
+        # Core services (lazy loaded)
         self._audio_service = None
         self._transcriber = None
         self._diarizer = None
@@ -52,6 +55,15 @@ class MeetingMindController:
         self._export_service = None
         self._history_service = None
         
+        # Phase 3 services (lazy loaded)
+        self._realtime_transcriber = None
+        self._highlights_manager = None
+        self._analytics = None
+        self._meeting_chat = None
+        self._integrations = None
+        self._shortcuts = None
+        self._calendar = None
+        
         # Current session data
         self.current_recording_path: Optional[str] = None
         self.current_transcript = None
@@ -61,6 +73,7 @@ class MeetingMindController:
         self.speaker_names: Dict[str, str] = {}  # SPEAKER_00 -> "John"
         self.current_template: str = "general"  # Current meeting template
         self.current_meeting_app: Optional[str] = None  # Detected meeting app
+        self.current_calendar_event = None  # Calendar event for current meeting
         
         # Auto-recording state
         self._auto_record_enabled = False
@@ -156,6 +169,91 @@ class MeetingMindController:
             from services.history import MeetingHistoryService
             self._history_service = MeetingHistoryService()
         return self._history_service
+    
+    # ==================== Phase 3 Service Accessors ====================
+    
+    @property
+    def realtime_transcriber(self):
+        """Lazy load real-time transcriber"""
+        if self._realtime_transcriber is None:
+            from services.realtime_transcriber import RealtimeTranscriber
+            self._realtime_transcriber = RealtimeTranscriber(
+                model_name=self.config.whisper.model
+            )
+        return self._realtime_transcriber
+    
+    @property
+    def highlights_manager(self):
+        """Lazy load highlights manager"""
+        if self._highlights_manager is None:
+            from services.highlights import HighlightsManager
+            self._highlights_manager = HighlightsManager()
+        return self._highlights_manager
+    
+    @property
+    def analytics(self):
+        """Lazy load meeting analytics"""
+        if self._analytics is None:
+            from services.analytics import MeetingAnalytics
+            self._analytics = MeetingAnalytics(
+                history_dir=Path(self.config.storage.meetings_dir)
+            )
+        return self._analytics
+    
+    @property
+    def meeting_chat(self):
+        """Lazy load meeting chat service"""
+        if self._meeting_chat is None:
+            from services.meeting_chat import MeetingChat
+            self._meeting_chat = MeetingChat(
+                history_dir=Path(self.config.storage.meetings_dir),
+                model_name=self.config.ollama.model
+            )
+        return self._meeting_chat
+    
+    @property
+    def integrations(self):
+        """Lazy load integrations service"""
+        if self._integrations is None:
+            from services.integrations import IntegrationsService
+            self._integrations = IntegrationsService()
+        return self._integrations
+    
+    @property
+    def shortcuts(self):
+        """Lazy load keyboard shortcuts"""
+        if self._shortcuts is None:
+            from services.shortcuts import get_shortcuts, ShortcutAction
+            self._shortcuts = get_shortcuts()
+            # Register default shortcuts
+            self._shortcuts.register(ShortcutAction.TOGGLE_RECORDING, self._toggle_recording)
+            self._shortcuts.register(ShortcutAction.ADD_BOOKMARK, self._add_bookmark)
+        return self._shortcuts
+    
+    @property
+    def calendar(self):
+        """Lazy load calendar integration"""
+        if self._calendar is None:
+            from services.calendar_integration import CalendarIntegration
+            self._calendar = CalendarIntegration()
+        return self._calendar
+    
+    def _toggle_recording(self):
+        """Toggle recording on/off (for keyboard shortcut)"""
+        if self.state == AppState.RECORDING:
+            self.stop_recording()
+        elif self.state in [AppState.IDLE, AppState.MONITORING]:
+            self.start_recording()
+    
+    def _add_bookmark(self):
+        """Add a bookmark at current time (for keyboard shortcut)"""
+        if self.state == AppState.RECORDING:
+            timestamp = self.audio_service.get_duration() if self._audio_service else 0
+            self.highlights_manager.add_highlight(
+                timestamp=timestamp,
+                text="[Bookmark]",
+                highlight_type="bookmark"
+            )
     
     # ==================== Recording Methods ====================
     
@@ -765,3 +863,301 @@ class MeetingMindController:
     def get_history_statistics(self) -> Dict[str, Any]:
         """Get meeting history statistics"""
         return self.history_service.get_statistics()
+    
+    # ==================== Real-Time Transcription ====================
+    
+    def start_live_transcription(
+        self,
+        device_id: int = None,
+        callback: Callable[[str, float], None] = None
+    ) -> bool:
+        """
+        Start recording with real-time transcription
+        
+        Args:
+            device_id: Audio device to record from
+            callback: Called with (text, timestamp) for each transcribed segment
+        """
+        if self.state not in [AppState.IDLE, AppState.MONITORING]:
+            print(f"Cannot start live transcription in state: {self.state}")
+            return False
+        
+        try:
+            # Start recording
+            self.audio_service.start_recording(device_id=device_id)
+            
+            # Start real-time transcriber
+            def on_transcript(text: str, timestamp: float, word_timestamps: List):
+                if callback:
+                    callback(text, timestamp)
+                self.emitter.emit(EventType.TRANSCRIPTION_COMPLETED, {
+                    "text": text,
+                    "timestamp": timestamp,
+                    "live": True
+                })
+            
+            self.realtime_transcriber.start(
+                sample_rate=self.config.audio.sample_rate,
+                callback=on_transcript
+            )
+            
+            self.state = AppState.LIVE_TRANSCRIBING
+            self.emitter.emit(EventType.RECORDING_STARTED, {
+                "live_transcription": True,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            return True
+            
+        except Exception as e:
+            self.state = AppState.ERROR
+            self.emitter.emit(EventType.ERROR, {"error": str(e)})
+            return False
+    
+    def stop_live_transcription(self) -> Optional[str]:
+        """Stop live transcription and return audio file path"""
+        if self.state != AppState.LIVE_TRANSCRIBING:
+            return self.stop_recording()
+        
+        try:
+            # Stop real-time transcriber
+            self.realtime_transcriber.stop()
+            
+            # Stop recording
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"meeting_{timestamp}.wav"
+            output_path = str(TEMP_DIR / filename)
+            
+            self.audio_service.stop_recording(output_path)
+            self.current_recording_path = output_path
+            self.state = AppState.IDLE
+            
+            self.emitter.emit(EventType.RECORDING_STOPPED, {
+                "file_path": output_path
+            })
+            
+            return output_path
+            
+        except Exception as e:
+            self.state = AppState.ERROR
+            return None
+    
+    def feed_audio_chunk(self, audio_data: bytes):
+        """Feed audio data to real-time transcriber"""
+        if self._realtime_transcriber:
+            self.realtime_transcriber.feed_audio(audio_data)
+    
+    # ==================== Highlights ====================
+    
+    def add_highlight(
+        self,
+        timestamp: float,
+        text: str,
+        highlight_type: str = "manual",
+        speaker: str = None
+    ):
+        """Add a highlight to the current meeting"""
+        from services.highlights import HighlightType
+        
+        hl_type = HighlightType(highlight_type) if isinstance(highlight_type, str) else highlight_type
+        self.highlights_manager.add_highlight(
+            timestamp=timestamp,
+            text=text,
+            highlight_type=hl_type,
+            speaker=speaker
+        )
+        
+        self.emitter.emit(EventType.QA_ANSWER_RECEIVED, {
+            "type": "highlight",
+            "timestamp": timestamp,
+            "text": text,
+            "highlight_type": highlight_type
+        })
+    
+    def get_highlights(self) -> List[Dict]:
+        """Get all highlights for current meeting"""
+        return [h.to_dict() for h in self.highlights_manager.get_all_highlights()]
+    
+    def auto_detect_highlights(self, transcript: Dict = None):
+        """Auto-detect important moments from transcript"""
+        transcript = transcript or self.current_transcript
+        if transcript:
+            self.highlights_manager.auto_detect_highlights(transcript)
+    
+    def extract_highlight_clip(
+        self,
+        highlight_id: str,
+        audio_path: str = None,
+        padding_seconds: float = 3.0
+    ) -> Optional[str]:
+        """Extract audio clip for a highlight"""
+        audio_path = audio_path or self.current_recording_path
+        if not audio_path:
+            return None
+        return self.highlights_manager.extract_highlight_clip(
+            highlight_id=highlight_id,
+            audio_path=audio_path,
+            output_dir=str(TEMP_DIR / "clips"),
+            padding_seconds=padding_seconds
+        )
+    
+    # ==================== Analytics ====================
+    
+    def get_meeting_analytics(self, meeting_data: Dict = None) -> Dict[str, Any]:
+        """Get analytics for a meeting"""
+        if meeting_data:
+            return self.analytics.analyze_meeting(meeting_data)
+        elif self.current_transcript:
+            return self.analytics.analyze_meeting({
+                "transcript": self.current_transcript,
+                "summary": self.current_summary or {},
+                "speaker_names": self.speaker_names
+            })
+        return {}
+    
+    def get_overall_analytics(self) -> Dict[str, Any]:
+        """Get overall meeting analytics and trends"""
+        return {
+            "stats": self.analytics.get_overall_stats(),
+            "trends": self.analytics.get_meeting_trends(),
+            "productivity": self.analytics.get_productivity_report()
+        }
+    
+    def get_speaker_analytics(self, speaker: str = None) -> Dict[str, Any]:
+        """Get analytics for a specific speaker or all speakers"""
+        if speaker:
+            return self.analytics.get_speaker_stats(speaker)
+        return self.analytics.get_all_speaker_stats()
+    
+    # ==================== Meeting Chat ====================
+    
+    def chat_about_meetings(self, question: str) -> str:
+        """Ask questions about past meetings"""
+        return self.meeting_chat.chat(question)
+    
+    def search_meetings_semantic(self, query: str, limit: int = 5) -> List[Dict]:
+        """Semantic search across meeting history"""
+        return self.meeting_chat.search_meetings(query, limit)
+    
+    def get_meeting_context(self, meeting_id: str) -> Dict:
+        """Get context for a specific meeting for chat"""
+        return self.meeting_chat.get_meeting_context(meeting_id)
+    
+    def clear_chat_memory(self):
+        """Clear chat conversation memory"""
+        self.meeting_chat.clear_memory()
+    
+    # ==================== Integrations ====================
+    
+    def configure_integration(
+        self,
+        platform: str,
+        **config
+    ):
+        """
+        Configure an integration
+        
+        Examples:
+            configure_integration('slack', webhook_url='https://...')
+            configure_integration('notion', api_key='...', database_id='...')
+            configure_integration('email', smtp_server='...', username='...')
+        """
+        self.integrations.configure(platform, **config)
+    
+    def send_to_integration(
+        self,
+        platform: str,
+        meeting_data: Dict = None,
+        **kwargs
+    ) -> bool:
+        """
+        Send meeting to an integration platform
+        
+        Args:
+            platform: 'slack', 'teams', 'notion', 'email'
+            meeting_data: Meeting data (uses current if None)
+            **kwargs: Additional platform-specific options
+        """
+        data = meeting_data or {
+            "summary": self.current_summary,
+            "transcript": self.current_transcript,
+            "highlights": self.get_highlights()
+        }
+        
+        return self.integrations.send(platform, data, **kwargs)
+    
+    def test_integration(self, platform: str) -> bool:
+        """Test an integration connection"""
+        return self.integrations.test_connection(platform)
+    
+    # ==================== Keyboard Shortcuts ====================
+    
+    def enable_shortcuts(self):
+        """Enable global keyboard shortcuts"""
+        self.shortcuts.start()
+        print("Keyboard shortcuts enabled")
+        print(self.shortcuts.get_shortcuts_help())
+    
+    def disable_shortcuts(self):
+        """Disable global keyboard shortcuts"""
+        self.shortcuts.stop()
+    
+    def set_shortcut(self, action: str, key_combo: str):
+        """Change a keyboard shortcut"""
+        from services.shortcuts import ShortcutAction
+        try:
+            action_enum = ShortcutAction(action)
+            self.shortcuts.set_shortcut(action_enum, key_combo)
+        except ValueError:
+            print(f"Unknown action: {action}")
+    
+    def get_shortcuts_list(self) -> Dict[str, Dict]:
+        """Get all keyboard shortcuts"""
+        return self.shortcuts.list_shortcuts()
+    
+    # ==================== Calendar Integration ====================
+    
+    def sync_calendar(self, provider: str = "google", days_ahead: int = 7):
+        """
+        Sync calendar events
+        
+        Args:
+            provider: 'google', 'outlook', or 'ical'
+            days_ahead: Number of days to sync
+        """
+        if provider == "google":
+            return self.calendar.sync_google_calendar(days_ahead)
+        elif provider == "outlook":
+            return self.calendar.sync_outlook_calendar(days_ahead)
+        return []
+    
+    def import_ical(self, ical_path: str):
+        """Import events from iCal file"""
+        return self.calendar.import_ical(ical_path)
+    
+    def get_current_calendar_event(self):
+        """Get the calendar event happening now"""
+        event = self.calendar.get_current_meeting()
+        if event:
+            self.current_calendar_event = event
+        return event
+    
+    def get_upcoming_meetings(self, hours: int = 24) -> List[Dict]:
+        """Get upcoming meetings from calendar"""
+        events = self.calendar.get_upcoming_meetings(hours)
+        return [e.to_dict() for e in events]
+    
+    def get_calendar_context_for_recording(self) -> Dict:
+        """Get calendar context to pre-populate meeting info"""
+        event = self.get_current_calendar_event()
+        if event:
+            return self.calendar.get_meeting_context(event)
+        return {}
+    
+    def configure_google_calendar(self, credentials_file: str):
+        """Configure Google Calendar integration"""
+        self.calendar.configure_google(credentials_file)
+    
+    def configure_outlook_calendar(self, client_id: str, client_secret: str):
+        """Configure Outlook Calendar integration"""
+        self.calendar.configure_outlook(client_id, client_secret)

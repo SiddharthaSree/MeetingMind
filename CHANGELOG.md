@@ -8,10 +8,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Real-time transcription during recording
 - Speaker profile learning (remember voices)
 - Batch processing for multiple files
 - Cross-platform support (macOS, Linux)
+
+---
+
+## [3.0.0] - 2025-01-11
+
+### 🚀 Phase 3 - Market Competitive Features
+
+Based on market research comparing MeetingMind to Otter.ai, Fireflies, Fathom, and Granola, 
+this release adds features to make MeetingMind competitive with commercial solutions.
+
+### Added
+
+#### ⚡ Real-Time Transcription
+- **Live Transcription** - See transcribed text as you speak during recording
+- **Streaming Whisper** - Efficient chunked audio processing
+- **Word-Level Timestamps** - Precise timing for each word
+- **Voice Activity Detection** - Smart silence handling to save resources
+
+#### 🌟 Highlights System
+- **Manual Bookmarks** - Mark important moments during meetings
+- **Auto-Detection** - AI identifies action items, decisions, and questions
+- **Highlight Types** - Decision, action item, question, important, bookmark
+- **Clip Extraction** - Export audio clips for specific highlights
+- **Quick Review** - Jump to highlighted moments during playback
+
+#### 📊 Analytics Dashboard
+- **Meeting Statistics** - Duration, word count, participants
+- **Speaker Analytics** - Talk time per person, interruptions
+- **Meeting Trends** - Patterns by day, week, month
+- **Productivity Score** - Based on action items and decisions
+- **Comprehensive Reports** - Export analytics data
+
+#### 💬 Meeting Chat (RAG-Style)
+- **Ask Questions** - Query your past meeting history with AI
+- **Semantic Search** - Find meetings by meaning, not just keywords
+- **Context-Aware** - Understands follow-up questions
+- **Meeting Memory** - Conversation history for better responses
+- **Cross-Meeting Insights** - Find patterns across multiple meetings
+
+#### 🔗 Integrations
+- **Slack** - Send meeting notes via webhook
+- **Microsoft Teams** - Share summaries to Teams channels
+- **Notion** - Export directly to Notion databases
+- **Email** - Send meeting notes via SMTP
+- **Test Connections** - Verify integrations before use
+
+#### ⌨️ Keyboard Shortcuts
+- **Global Hotkeys** - Control MeetingMind from anywhere
+- **Toggle Recording** - Ctrl+Shift+R to start/stop
+- **Add Bookmark** - Ctrl+Shift+B during recording
+- **Mark Action Item** - Ctrl+Shift+A
+- **Mark Decision** - Ctrl+Shift+D
+- **Customizable** - Change shortcuts to your preference
+
+#### 📅 Calendar Integration
+- **Google Calendar** - Sync upcoming meetings
+- **Outlook Calendar** - Microsoft 365 integration
+- **iCal Import** - Import from any calendar app
+- **Meeting Context** - Auto-populate titles and attendees
+- **Smart Matching** - Match recordings to calendar events
+
+### Changed
+- **UI Redesign** - Added Analytics, Chat, and Integrations tabs
+- **Controller** - Extended with Phase 3 service integrations
+- **Requirements** - Added pynput for keyboard shortcuts
 
 ---
 

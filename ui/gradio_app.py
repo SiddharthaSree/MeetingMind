@@ -75,7 +75,19 @@ class MeetingMindUI:
                 with gr.Tab("📚 History", id="history"):
                     self._build_history_tab()
                 
-                # Tab 5: Settings
+                # Tab 5: Analytics Dashboard
+                with gr.Tab("📊 Analytics", id="analytics"):
+                    self._build_analytics_tab()
+                
+                # Tab 6: Meeting Chat
+                with gr.Tab("💬 Chat", id="chat"):
+                    self._build_chat_tab()
+                
+                # Tab 7: Integrations
+                with gr.Tab("🔗 Integrations", id="integrations"):
+                    self._build_integrations_tab()
+                
+                # Tab 8: Settings
                 with gr.Tab("⚙️ Settings", id="settings"):
                     self._build_settings_tab()
             
@@ -439,6 +451,292 @@ class MeetingMindUI:
                 self.qa_mode, self.sample_rate
             ],
             outputs=[self.settings_status]
+        )
+    
+    def _build_analytics_tab(self):
+        """Build the analytics dashboard tab"""
+        
+        gr.Markdown("### 📊 Meeting Analytics & Insights")
+        
+        with gr.Row():
+            self.refresh_analytics_btn = gr.Button("🔄 Refresh Analytics", variant="primary")
+        
+        # Overall stats
+        with gr.Row():
+            with gr.Column():
+                gr.Markdown("#### 📈 Overall Statistics")
+                self.overall_stats_display = gr.Markdown("_Click refresh to load analytics_")
+            
+            with gr.Column():
+                gr.Markdown("#### 📅 Meeting Trends")
+                self.trends_display = gr.Markdown("")
+        
+        # Speaker analytics
+        gr.Markdown("#### 🎤 Speaker Analytics")
+        with gr.Row():
+            self.speaker_stats_display = gr.Markdown("_No speaker data yet_")
+        
+        # Productivity metrics
+        with gr.Accordion("🎯 Productivity Report", open=False):
+            self.productivity_display = gr.Markdown("")
+        
+        # Current meeting analytics
+        gr.Markdown("#### 📋 Current Meeting Analysis")
+        self.current_meeting_analytics = gr.Markdown(
+            "_Process a meeting to see detailed analytics_"
+        )
+        
+        # Event handlers
+        self.refresh_analytics_btn.click(
+            fn=self._load_analytics,
+            outputs=[
+                self.overall_stats_display,
+                self.trends_display,
+                self.speaker_stats_display,
+                self.productivity_display,
+                self.current_meeting_analytics
+            ]
+        )
+    
+    def _build_chat_tab(self):
+        """Build the meeting chat tab - ask questions about past meetings"""
+        
+        gr.Markdown("""
+        ### 💬 Chat with Your Meetings
+        Ask questions about your past meetings using AI. The system will search 
+        through your meeting history to find relevant information.
+        """)
+        
+        # Chat interface
+        self.chat_history_display = gr.Chatbot(
+            label="Conversation",
+            height=400,
+            show_label=False
+        )
+        
+        with gr.Row():
+            self.chat_input = gr.Textbox(
+                label="Ask a question",
+                placeholder="e.g., What action items came from last week's standup?",
+                scale=4
+            )
+            self.chat_send_btn = gr.Button("Send", variant="primary", scale=1)
+        
+        with gr.Row():
+            self.chat_clear_btn = gr.Button("🗑️ Clear Chat")
+            self.semantic_search_btn = gr.Button("🔍 Search Meetings")
+        
+        # Search results
+        with gr.Accordion("🔍 Search Results", open=False):
+            self.search_results_display = gr.Markdown("")
+        
+        # Example questions
+        with gr.Accordion("💡 Example Questions", open=True):
+            gr.Markdown("""
+            - "What were the main decisions made in our last planning meeting?"
+            - "Show me action items assigned to John"
+            - "Summarize all discussions about the new feature"
+            - "When did we last discuss the budget?"
+            - "What topics came up most often this month?"
+            """)
+        
+        # Event handlers
+        self.chat_send_btn.click(
+            fn=self._chat_send_message,
+            inputs=[self.chat_input, self.chat_history_display],
+            outputs=[self.chat_history_display, self.chat_input]
+        )
+        
+        self.chat_input.submit(
+            fn=self._chat_send_message,
+            inputs=[self.chat_input, self.chat_history_display],
+            outputs=[self.chat_history_display, self.chat_input]
+        )
+        
+        self.chat_clear_btn.click(
+            fn=self._chat_clear,
+            outputs=[self.chat_history_display]
+        )
+        
+        self.semantic_search_btn.click(
+            fn=self._semantic_search,
+            inputs=[self.chat_input],
+            outputs=[self.search_results_display]
+        )
+    
+    def _build_integrations_tab(self):
+        """Build the integrations settings tab"""
+        
+        gr.Markdown("""
+        ### 🔗 Integrations
+        Connect MeetingMind with your favorite tools to automatically share 
+        meeting notes and summaries.
+        """)
+        
+        with gr.Tabs():
+            # Slack
+            with gr.Tab("Slack"):
+                gr.Markdown("#### Send meeting notes to Slack")
+                self.slack_webhook = gr.Textbox(
+                    label="Slack Webhook URL",
+                    placeholder="https://hooks.slack.com/services/...",
+                    type="password"
+                )
+                self.slack_channel = gr.Textbox(
+                    label="Channel (optional)",
+                    placeholder="#meetings"
+                )
+                with gr.Row():
+                    self.slack_save_btn = gr.Button("💾 Save Slack Config")
+                    self.slack_test_btn = gr.Button("🧪 Test Connection")
+                self.slack_status = gr.Markdown("")
+            
+            # Microsoft Teams
+            with gr.Tab("Microsoft Teams"):
+                gr.Markdown("#### Send meeting notes to Teams")
+                self.teams_webhook = gr.Textbox(
+                    label="Teams Webhook URL",
+                    placeholder="https://outlook.office.com/webhook/...",
+                    type="password"
+                )
+                with gr.Row():
+                    self.teams_save_btn = gr.Button("💾 Save Teams Config")
+                    self.teams_test_btn = gr.Button("🧪 Test Connection")
+                self.teams_status = gr.Markdown("")
+            
+            # Notion
+            with gr.Tab("Notion"):
+                gr.Markdown("#### Export meeting notes to Notion")
+                self.notion_api_key = gr.Textbox(
+                    label="Notion API Key",
+                    placeholder="secret_...",
+                    type="password"
+                )
+                self.notion_database_id = gr.Textbox(
+                    label="Database ID",
+                    placeholder="abc123..."
+                )
+                with gr.Row():
+                    self.notion_save_btn = gr.Button("💾 Save Notion Config")
+                    self.notion_test_btn = gr.Button("🧪 Test Connection")
+                self.notion_status = gr.Markdown("")
+            
+            # Email
+            with gr.Tab("Email"):
+                gr.Markdown("#### Email meeting notes")
+                self.email_smtp_server = gr.Textbox(
+                    label="SMTP Server",
+                    placeholder="smtp.gmail.com"
+                )
+                self.email_smtp_port = gr.Number(
+                    label="SMTP Port",
+                    value=587
+                )
+                self.email_username = gr.Textbox(
+                    label="Email Username"
+                )
+                self.email_password = gr.Textbox(
+                    label="Email Password",
+                    type="password"
+                )
+                self.email_from = gr.Textbox(
+                    label="From Address"
+                )
+                with gr.Row():
+                    self.email_save_btn = gr.Button("💾 Save Email Config")
+                    self.email_test_btn = gr.Button("🧪 Test Connection")
+                self.email_status = gr.Markdown("")
+            
+            # Calendar
+            with gr.Tab("Calendar"):
+                gr.Markdown("#### Calendar Integration")
+                gr.Markdown("""
+                Sync with your calendar to auto-populate meeting titles and attendees.
+                """)
+                
+                with gr.Row():
+                    self.calendar_provider = gr.Radio(
+                        label="Provider",
+                        choices=["Google Calendar", "Outlook Calendar", "Import iCal"],
+                        value="Google Calendar"
+                    )
+                
+                self.google_credentials_file = gr.File(
+                    label="Google Calendar Credentials (JSON)",
+                    file_types=[".json"],
+                    visible=True
+                )
+                
+                self.ical_file = gr.File(
+                    label="iCal File (.ics)",
+                    file_types=[".ics"],
+                    visible=False
+                )
+                
+                with gr.Row():
+                    self.calendar_sync_btn = gr.Button("🔄 Sync Calendar", variant="primary")
+                    self.calendar_refresh_btn = gr.Button("📅 View Upcoming")
+                
+                self.calendar_status = gr.Markdown("")
+                self.upcoming_meetings_display = gr.Markdown("")
+        
+        # Quick send section
+        gr.Markdown("### 📤 Quick Send Current Meeting")
+        with gr.Row():
+            self.quick_send_platform = gr.Dropdown(
+                label="Send to",
+                choices=["Slack", "Teams", "Notion", "Email"],
+                value="Slack"
+            )
+            self.quick_send_btn = gr.Button("📤 Send Now", variant="primary")
+        self.quick_send_status = gr.Markdown("")
+        
+        # Event handlers
+        self.slack_save_btn.click(
+            fn=self._save_slack_config,
+            inputs=[self.slack_webhook, self.slack_channel],
+            outputs=[self.slack_status]
+        )
+        self.slack_test_btn.click(
+            fn=self._test_slack,
+            outputs=[self.slack_status]
+        )
+        
+        self.teams_save_btn.click(
+            fn=self._save_teams_config,
+            inputs=[self.teams_webhook],
+            outputs=[self.teams_status]
+        )
+        self.teams_test_btn.click(
+            fn=self._test_teams,
+            outputs=[self.teams_status]
+        )
+        
+        self.notion_save_btn.click(
+            fn=self._save_notion_config,
+            inputs=[self.notion_api_key, self.notion_database_id],
+            outputs=[self.notion_status]
+        )
+        
+        self.email_save_btn.click(
+            fn=self._save_email_config,
+            inputs=[
+                self.email_smtp_server, self.email_smtp_port,
+                self.email_username, self.email_password, self.email_from
+            ],
+            outputs=[self.email_status]
+        )
+        
+        self.calendar_sync_btn.click(
+            fn=self._sync_calendar,
+            inputs=[self.calendar_provider, self.google_credentials_file],
+            outputs=[self.calendar_status, self.upcoming_meetings_display]
+        )
+        
+        self.quick_send_btn.click(
+            fn=self._quick_send,
+            inputs=[self.quick_send_platform],
+            outputs=[self.quick_send_status]
         )
     
     # ==================== Event Handlers ====================
@@ -892,6 +1190,230 @@ class MeetingMindUI:
             return "✅ Settings saved successfully!"
         except Exception as e:
             return f"❌ Error saving settings: {str(e)}"
+    
+    # ==================== Analytics Handlers ====================
+    
+    def _load_analytics(self):
+        """Load analytics data"""
+        try:
+            analytics = self.controller.get_overall_analytics()
+            
+            # Overall stats
+            stats = analytics.get('stats', {})
+            overall_md = f"""
+**Total Meetings:** {stats.get('total_meetings', 0)}
+**Total Duration:** {stats.get('total_hours', 0):.1f} hours
+**Average Duration:** {stats.get('avg_duration_minutes', 0):.0f} minutes
+**Total Participants:** {stats.get('total_participants', 0)}
+"""
+            
+            # Trends
+            trends = analytics.get('trends', {})
+            trends_md = "**Meeting Frequency by Day:**\n"
+            for day, count in trends.get('by_day_of_week', {}).items():
+                trends_md += f"- {day}: {count} meetings\n"
+            
+            # Speaker stats
+            speaker_stats = self.controller.get_speaker_analytics()
+            speaker_md = ""
+            for speaker, data in speaker_stats.items():
+                speaker_md += f"**{speaker}:** {data.get('total_talk_time_minutes', 0):.0f} min talk time\n"
+            if not speaker_md:
+                speaker_md = "_No speaker data available_"
+            
+            # Productivity
+            productivity = analytics.get('productivity', {})
+            prod_md = f"""
+**Productivity Score:** {productivity.get('score', 0)}/100
+**Action Items Generated:** {productivity.get('action_items', 0)}
+**Decisions Made:** {productivity.get('decisions', 0)}
+"""
+            
+            # Current meeting
+            current_md = "_No current meeting_"
+            if self.controller.current_transcript:
+                current_analytics = self.controller.get_meeting_analytics()
+                current_md = f"""
+**Duration:** {current_analytics.get('duration_minutes', 0):.0f} minutes
+**Speakers:** {current_analytics.get('num_speakers', 0)}
+**Word Count:** {current_analytics.get('word_count', 0)}
+"""
+            
+            return overall_md, trends_md, speaker_md, prod_md, current_md
+            
+        except Exception as e:
+            error_msg = f"_Error loading analytics: {str(e)}_"
+            return error_msg, "", "", "", ""
+    
+    # ==================== Chat Handlers ====================
+    
+    def _chat_send_message(self, message: str, history: List):
+        """Send message to meeting chat"""
+        if not message.strip():
+            return history, ""
+        
+        try:
+            # Add user message to history
+            history = history or []
+            history.append((message, None))
+            
+            # Get response from meeting chat
+            response = self.controller.chat_about_meetings(message)
+            
+            # Update with response
+            history[-1] = (message, response)
+            
+            return history, ""
+        except Exception as e:
+            history[-1] = (message, f"Error: {str(e)}")
+            return history, ""
+    
+    def _chat_clear(self):
+        """Clear chat history"""
+        try:
+            self.controller.clear_chat_memory()
+        except:
+            pass
+        return []
+    
+    def _semantic_search(self, query: str):
+        """Perform semantic search across meetings"""
+        if not query.strip():
+            return "_Enter a search query_"
+        
+        try:
+            results = self.controller.search_meetings_semantic(query, limit=5)
+            
+            if not results:
+                return "_No matching meetings found_"
+            
+            md = "### Search Results\n\n"
+            for i, result in enumerate(results, 1):
+                md += f"**{i}. {result.get('title', 'Untitled')}**\n"
+                md += f"Date: {result.get('date', 'Unknown')}\n"
+                if result.get('snippet'):
+                    md += f"> {result['snippet'][:200]}...\n"
+                md += "\n---\n"
+            
+            return md
+        except Exception as e:
+            return f"_Search error: {str(e)}_"
+    
+    # ==================== Integration Handlers ====================
+    
+    def _save_slack_config(self, webhook_url: str, channel: str):
+        """Save Slack configuration"""
+        try:
+            self.controller.configure_integration(
+                'slack',
+                webhook_url=webhook_url,
+                channel=channel
+            )
+            return "✅ Slack configuration saved!"
+        except Exception as e:
+            return f"❌ Error: {str(e)}"
+    
+    def _test_slack(self):
+        """Test Slack connection"""
+        try:
+            success = self.controller.test_integration('slack')
+            return "✅ Slack test successful!" if success else "❌ Slack test failed"
+        except Exception as e:
+            return f"❌ Error: {str(e)}"
+    
+    def _save_teams_config(self, webhook_url: str):
+        """Save Teams configuration"""
+        try:
+            self.controller.configure_integration('teams', webhook_url=webhook_url)
+            return "✅ Teams configuration saved!"
+        except Exception as e:
+            return f"❌ Error: {str(e)}"
+    
+    def _test_teams(self):
+        """Test Teams connection"""
+        try:
+            success = self.controller.test_integration('teams')
+            return "✅ Teams test successful!" if success else "❌ Teams test failed"
+        except Exception as e:
+            return f"❌ Error: {str(e)}"
+    
+    def _save_notion_config(self, api_key: str, database_id: str):
+        """Save Notion configuration"""
+        try:
+            self.controller.configure_integration(
+                'notion',
+                api_key=api_key,
+                database_id=database_id
+            )
+            return "✅ Notion configuration saved!"
+        except Exception as e:
+            return f"❌ Error: {str(e)}"
+    
+    def _save_email_config(
+        self,
+        smtp_server: str,
+        smtp_port: int,
+        username: str,
+        password: str,
+        from_addr: str
+    ):
+        """Save email configuration"""
+        try:
+            self.controller.configure_integration(
+                'email',
+                smtp_server=smtp_server,
+                smtp_port=int(smtp_port),
+                username=username,
+                password=password,
+                from_address=from_addr
+            )
+            return "✅ Email configuration saved!"
+        except Exception as e:
+            return f"❌ Error: {str(e)}"
+    
+    def _sync_calendar(self, provider: str, credentials_file):
+        """Sync calendar events"""
+        try:
+            if provider == "Google Calendar":
+                if credentials_file:
+                    self.controller.configure_google_calendar(credentials_file.name)
+                events = self.controller.sync_calendar('google')
+            elif provider == "Outlook Calendar":
+                events = self.controller.sync_calendar('outlook')
+            elif provider == "Import iCal":
+                return "Use the iCal file upload", ""
+            else:
+                events = []
+            
+            # Format upcoming meetings
+            upcoming = self.controller.get_upcoming_meetings(hours=168)  # 1 week
+            
+            if not upcoming:
+                return "✅ Calendar synced!", "_No upcoming meetings_"
+            
+            upcoming_md = "### Upcoming Meetings\n\n"
+            for event in upcoming[:10]:
+                upcoming_md += f"**{event.get('title', 'Untitled')}**\n"
+                upcoming_md += f"📅 {event.get('start_time', '')}\n"
+                if event.get('attendees'):
+                    upcoming_md += f"👥 {', '.join(event['attendees'][:3])}\n"
+                upcoming_md += "\n"
+            
+            return f"✅ Synced {len(events)} events!", upcoming_md
+        except Exception as e:
+            return f"❌ Error: {str(e)}", ""
+    
+    def _quick_send(self, platform: str):
+        """Quick send current meeting to platform"""
+        if not self.controller.current_summary:
+            return "❌ No meeting to send. Process a meeting first."
+        
+        try:
+            platform_key = platform.lower().replace(" ", "")
+            success = self.controller.send_to_integration(platform_key)
+            return f"✅ Sent to {platform}!" if success else f"❌ Failed to send to {platform}"
+        except Exception as e:
+            return f"❌ Error: {str(e)}"
     
     def _get_custom_css(self) -> str:
         """Custom CSS for the UI"""
