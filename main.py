@@ -5,13 +5,20 @@ Main entry point for the application
 Run with: python main.py
 """
 import sys
+import os
 import argparse
 import threading
+import webbrowser
 from pathlib import Path
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+# Create data directories on startup
+DATA_DIRS = ["data/meetings", "data/profiles", "data/temp", "data/exports"]
+for dir_path in DATA_DIRS:
+    Path(dir_path).mkdir(parents=True, exist_ok=True)
 
 
 def check_dependencies():
@@ -117,7 +124,7 @@ def main():
     
     print("""
     ╔══════════════════════════════════════════╗
-    ║  🎙️  MeetingMind v2.0                   ║
+    ║  🎙️  MeetingMind v2.1                   ║
     ║  Offline Meeting Notes Assistant         ║
     ╚══════════════════════════════════════════╝
     """)
@@ -125,9 +132,14 @@ def main():
     # Check dependencies
     print("Checking dependencies...")
     if not check_dependencies():
+        print("\n💡 TIP: Run 'pip install -r requirements.txt' to install dependencies")
+        input("Press Enter to exit...")
         sys.exit(1)
     
-    check_ollama()  # Warning only, don't exit
+    ollama_ok = check_ollama()  # Warning only, don't exit
+    if not ollama_ok:
+        print("\n💡 TIP: Install Ollama from https://ollama.ai")
+        print("   Then run: ollama pull llama3.2")
     
     if args.check:
         print("\n✅ Dependency check complete")
@@ -151,6 +163,7 @@ def main():
     
     # Launch Gradio UI
     print(f"\n🌐 Starting web UI on port {args.port}...")
+    print(f"   Open your browser to: http://localhost:{args.port}")
     
     from ui.gradio_app import create_gradio_app
     app = create_gradio_app(controller)
@@ -160,14 +173,25 @@ def main():
             server_port=args.port,
             share=args.share,
             inbrowser=not args.no_browser,
-            show_error=True
+            show_error=True,
+            quiet=True  # Less verbose output
         )
     except KeyboardInterrupt:
         print("\n👋 Shutting down MeetingMind...")
+    except Exception as e:
+        print(f"\n❌ Error starting UI: {e}")
+        print("\n💡 TIP: Try a different port with --port 8080")
+        input("Press Enter to exit...")
     finally:
         if tray:
             tray.stop()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"\n❌ Fatal error: {e}")
+        import traceback
+        traceback.print_exc()
+        input("Press Enter to exit...")

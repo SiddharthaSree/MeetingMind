@@ -2,6 +2,8 @@
 """
 MeetingMind PyInstaller Spec File
 Builds a standalone Windows executable with all dependencies
+
+Build command: pyinstaller meetingmind.spec --noconfirm
 """
 import sys
 import os
@@ -10,55 +12,78 @@ from pathlib import Path
 # Get the project root
 project_root = Path(SPECPATH)
 
+# Collect data files
+datas = []
+
+# Add assets if they exist
+assets_path = project_root / 'assets'
+if assets_path.exists():
+    datas.append(('assets', 'assets'))
+
+# Add any templates
+templates_path = project_root / 'templates'
+if templates_path.exists():
+    datas.append(('templates', 'templates'))
+
 # Analysis - collect all Python files and dependencies
 a = Analysis(
     ['main.py'],
     pathex=[str(project_root)],
     binaries=[],
-    datas=[
-        # Include package data
-        ('assets', 'assets'),  # Icons and images
-        ('templates', 'templates'),  # HTML templates if any
-    ],
+    datas=datas,
     hiddenimports=[
         # Core dependencies
         'gradio',
         'gradio.themes',
+        'gradio.themes.soft',
         'gradio.components',
+        'gradio.blocks',
         'ollama',
         'torch',
         'numpy',
+        'tqdm',
         
         # Whisper and speech processing
         'whisper',
         'whisper.model',
         'whisper.audio',
         'whisper.transcribe',
+        'whisper.tokenizer',
         
         # Speaker diarization
         'pyannote',
         'pyannote.audio',
         'pyannote.audio.pipelines',
+        'pyannote.core',
         'speechbrain',
         
         # Audio
         'soundfile',
         'sounddevice',
         'pyaudiowpatch',
-        'ffmpeg',
         
         # Export formats
         'docx',
         'docx.shared',
         'docx.enum.text',
-        'weasyprint',
+        'docx.enum.style',
         'jinja2',
+        'markupsafe',
         
         # System
         'psutil',
         'pystray',
         'PIL',
         'PIL.Image',
+        'PIL.ImageDraw',
+        
+        # Web/networking
+        'httpx',
+        'httpcore',
+        'anyio',
+        'starlette',
+        'fastapi',
+        'uvicorn',
         
         # Our modules
         'core',
@@ -90,6 +115,9 @@ a = Analysis(
         'PyQt6',
         'PySide2',
         'PySide6',
+        'IPython',
+        'jupyter',
+        'notebook',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -99,6 +127,14 @@ a = Analysis(
 
 # Remove duplicate binaries/data
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+
+# Check if icon exists
+icon_path = project_root / 'assets' / 'icon.ico'
+icon_file = str(icon_path) if icon_path.exists() else None
+
+# Check if version info exists
+version_path = project_root / 'version_info.txt'
+version_file = str(version_path) if version_path.exists() else None
 
 # Create the executable
 exe = EXE(
@@ -117,8 +153,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/icon.ico',  # App icon
-    version='version_info.txt',  # Version info
+    icon=icon_file,
+    version=version_file,
 )
 
 # Collect all files into dist folder

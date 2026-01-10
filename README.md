@@ -2,6 +2,32 @@
 
 A **100% free, offline meeting notes assistant** that captures system audio from Teams/Zoom calls, transcribes with speaker identification, and generates intelligent summaries with action items - all running locally on your machine!
 
+<p align="center">
+  <a href="https://github.com/SiddharthaSree/MeetingMind/releases">
+    <img src="https://img.shields.io/badge/Download-Windows%20EXE-blue?style=for-the-badge&logo=windows" alt="Download Windows">
+  </a>
+</p>
+
+---
+
+## 📥 Quick Download
+
+| Platform | Download | Requirements |
+|----------|----------|--------------|
+| **Windows** | [📦 Download EXE](https://github.com/SiddharthaSree/MeetingMind/releases) | Windows 10/11, [Ollama](https://ollama.ai), [FFmpeg](https://ffmpeg.org) |
+
+### First Time Setup
+1. **Download** the latest release ZIP
+2. **Extract** to any folder
+3. **Install Ollama** from https://ollama.ai
+4. **Open terminal** and run: `ollama pull llama3.2`
+5. **Run** `MeetingMind.exe`
+6. **Done!** 🎉
+
+> 💡 See [INSTALL.md](INSTALL.md) for detailed setup instructions
+
+---
+
 ## ✨ Features
 
 ### 🎤 Audio Capture
@@ -43,23 +69,31 @@ A **100% free, offline meeting notes assistant** that captures system audio from
 - **No Data Collection** - Your meetings stay on your machine
 - **Completely Free** - No API costs, no subscriptions
 
+---
+
 ## 📋 Requirements
 
-- **Python 3.10 or higher**
 - **Windows 10/11** (for system audio capture)
-- **FFmpeg** (for audio processing)
-- **Ollama** (local LLM runtime)
+- **Ollama** (local LLM runtime) - [Download](https://ollama.ai)
+- **FFmpeg** (for audio processing) - [Download](https://ffmpeg.org)
 - **8GB+ RAM** recommended (16GB for larger models)
 
-## 🚀 Quick Start
+---
 
-### Option A: Download Standalone EXE (Recommended)
+## 🚀 Installation
 
-Download the latest release from [Releases](https://github.com/SiddharthaSree/MeetingMind/releases) - no Python installation required!
+### Option A: Download Pre-built EXE (Easiest!)
 
-### Option B: Run from Source
+1. Go to [**Releases**](https://github.com/SiddharthaSree/MeetingMind/releases)
+2. Download `MeetingMind-Windows.zip`
+3. Extract the ZIP file
+4. Install [Ollama](https://ollama.ai) and run `ollama pull llama3.2`
+5. Double-click `MeetingMind.exe`
+6. Your browser opens to http://localhost:7860
 
-### 1. Install FFmpeg
+### Option B: Run from Source (For Developers)
+
+#### 1. Install FFmpeg
 
 **Windows:**
 ```powershell
