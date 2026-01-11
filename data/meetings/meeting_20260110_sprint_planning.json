@@ -1,0 +1,100 @@
+{
+  "id": "meeting_20260110_sprint_planning",
+  "title": "Sprint Planning - Q1 2026",
+  "created_at": "2026-01-11T20:30:53.914465",
+  "duration_seconds": 57.2,
+  "participants": [
+    "Alice Johnson",
+    "Bob Smith",
+    "Carol Williams"
+  ],
+  "transcript": {
+    "segments": [
+      {
+        "start": 0.0,
+        "end": 5.2,
+        "speaker": "Alice Johnson",
+        "text": "Good morning everyone, let's get started with our sprint planning."
+      },
+      {
+        "start": 5.5,
+        "end": 12.1,
+        "speaker": "Bob Smith",
+        "text": "Thanks Alice. I've prepared the backlog items for this sprint. We have about 45 story points to discuss."
+      },
+      {
+        "start": 12.5,
+        "end": 20.0,
+        "speaker": "Carol Williams",
+        "text": "I reviewed the items yesterday. I think we should prioritize the authentication improvements first."
+      },
+      {
+        "start": 20.5,
+        "end": 28.3,
+        "speaker": "Alice Johnson",
+        "text": "Agreed. Security is our top priority this quarter. Bob, can you walk us through the technical requirements?"
+      },
+      {
+        "start": 28.8,
+        "end": 40.0,
+        "speaker": "Bob Smith",
+        "text": "Sure. We need to implement OAuth 2.0 integration, add multi-factor authentication, and improve our session management. I estimate about 20 story points for all of this."
+      },
+      {
+        "start": 40.5,
+        "end": 50.2,
+        "speaker": "Carol Williams",
+        "text": "That sounds reasonable. I can take the MFA implementation if someone else handles the OAuth work."
+      },
+      {
+        "start": 50.8,
+        "end": 60.0,
+        "speaker": "Alice Johnson",
+        "text": "Perfect. Let's assign tasks and wrap up. I'll send out the summary after the meeting."
+      }
+    ],
+    "full_text": "Good morning everyone, let's get started with our sprint planning. Thanks Alice. I've prepared the backlog items for this sprint. We have about 45 story points to discuss. I reviewed the items yesterday. I think we should prioritize the authentication improvements first. Agreed. Security is our top priority this quarter. Bob, can you walk us through the technical requirements? Sure. We need to implement OAuth 2.0 integration, add multi-factor authentication, and improve our session management. I estimate about 20 story points for all of this. That sounds reasonable. I can take the MFA implementation if someone else handles the OAuth work. Perfect. Let's assign tasks and wrap up. I'll send out the summary after the meeting."
+  },
+  "summary": {
+    "brief": "This was a productive meeting discussing project updates and next steps.",
+    "detailed": "The team met to discuss current project progress, identify blockers, and plan upcoming work. Key decisions were made regarding timeline adjustments and resource allocation.",
+    "topics": [
+      "Project Updates",
+      "Timeline Discussion",
+      "Resource Planning",
+      "Next Steps"
+    ]
+  },
+  "action_items": [
+    {
+      "task": "Share meeting notes with the team",
+      "assignee": "Carol Williams",
+      "due_date": "2026-01-16",
+      "priority": "low"
+    },
+    {
+      "task": "Update project timeline in tracking system",
+      "assignee": "Alice Johnson",
+      "due_date": "2026-01-23",
+      "priority": "low"
+    },
+    {
+      "task": "Schedule follow-up meeting with stakeholders",
+      "assignee": "Carol Williams",
+      "due_date": "2026-01-16",
+      "priority": "high"
+    }
+  ],
+  "key_points": [
+    "Project is on track for Q1 delivery",
+    "Additional resources approved for development",
+    "Customer feedback has been positive",
+    "New feature requests prioritized for next sprint",
+    "Team velocity has improved by 15%"
+  ],
+  "metadata": {
+    "language": "en",
+    "model": "demo",
+    "processed_at": "2026-01-11T20:30:53.915557"
+  }
+}

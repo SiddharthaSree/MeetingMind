@@ -1,0 +1,95 @@
+{
+  "id": "meeting_20260109_product_review",
+  "title": "Product Review - Feature Demo",
+  "created_at": "2026-01-11T20:30:53.915557",
+  "duration_seconds": 52.5,
+  "participants": [
+    "David Chen",
+    "Emma Davis",
+    "Frank Miller",
+    "Grace Lee"
+  ],
+  "transcript": {
+    "segments": [
+      {
+        "start": 0.0,
+        "end": 8.0,
+        "speaker": "David Chen",
+        "text": "Welcome to our monthly product review. Today we'll be demoing the new transcription features."
+      },
+      {
+        "start": 8.5,
+        "end": 18.0,
+        "speaker": "Emma Davis",
+        "text": "I'm excited to show what we've built. The real-time transcription accuracy has improved to 95% in our latest tests."
+      },
+      {
+        "start": 18.5,
+        "end": 25.0,
+        "speaker": "Frank Miller",
+        "text": "That's impressive! How does it handle multiple speakers in a noisy environment?"
+      },
+      {
+        "start": 25.5,
+        "end": 35.0,
+        "speaker": "Emma Davis",
+        "text": "Great question. We've added speaker diarization that can identify up to 10 different speakers with 90% accuracy."
+      },
+      {
+        "start": 35.5,
+        "end": 45.0,
+        "speaker": "Grace Lee",
+        "text": "The customer feedback has been very positive. They especially love the automatic summarization feature."
+      },
+      {
+        "start": 45.5,
+        "end": 55.0,
+        "speaker": "David Chen",
+        "text": "Excellent work team. Let's discuss the roadmap for Q2 and prioritize the enhancement requests."
+      }
+    ],
+    "full_text": "Welcome to our monthly product review. Today we'll be demoing the new transcription features. I'm excited to show what we've built. The real-time transcription accuracy has improved to 95% in our latest tests. That's impressive! How does it handle multiple speakers in a noisy environment? Great question. We've added speaker diarization that can identify up to 10 different speakers with 90% accuracy. The customer feedback has been very positive. They especially love the automatic summarization feature. Excellent work team. Let's discuss the roadmap for Q2 and prioritize the enhancement requests."
+  },
+  "summary": {
+    "brief": "This was a productive meeting discussing project updates and next steps.",
+    "detailed": "The team met to discuss current project progress, identify blockers, and plan upcoming work. Key decisions were made regarding timeline adjustments and resource allocation.",
+    "topics": [
+      "Project Updates",
+      "Timeline Discussion",
+      "Resource Planning",
+      "Next Steps"
+    ]
+  },
+  "action_items": [
+    {
+      "task": "Share meeting notes with the team",
+      "assignee": "Grace Lee",
+      "due_date": "2026-01-14",
+      "priority": "high"
+    },
+    {
+      "task": "Schedule follow-up meeting with stakeholders",
+      "assignee": "Frank Miller",
+      "due_date": "2026-01-24",
+      "priority": "high"
+    },
+    {
+      "task": "Update project timeline in tracking system",
+      "assignee": "Frank Miller",
+      "due_date": "2026-01-23",
+      "priority": "medium"
+    }
+  ],
+  "key_points": [
+    "Project is on track for Q1 delivery",
+    "Additional resources approved for development",
+    "Customer feedback has been positive",
+    "New feature requests prioritized for next sprint",
+    "Team velocity has improved by 15%"
+  ],
+  "metadata": {
+    "language": "en",
+    "model": "demo",
+    "processed_at": "2026-01-11T20:30:53.915557"
+  }
+}
